@@ -11,7 +11,7 @@ import java.io.IOException;
 public class Synchro {
 
     public static void main(String... args) throws IOException {
-        Sardine connection = SardineFactory.begin("","");
-        connection.getResources("").stream().forEach(System.out::println);
+        Sardine connection = SardineFactory.begin(args[1],args[2]);
+        connection.list(args[0]).forEach(System.out::println);
     }
 }
