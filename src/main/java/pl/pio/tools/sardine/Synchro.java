@@ -3,11 +3,15 @@ package pl.pio.tools.sardine;
 import com.github.sardine.DavResource;
 import com.github.sardine.Sardine;
 import com.github.sardine.SardineFactory;
+import org.apache.commons.io.FileUtils;
+import sun.misc.IOUtils;
 
+import java.awt.*;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Comparator;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,13 +32,28 @@ public class Synchro {
         Optional<DavResource> davResourceOptional = synchro.getRootResource(synchro.getConnection().list(args[0]+"/remote.php/webdav/"));
         if(davResourceOptional.isPresent()) {
             Optional<DavResource> davResource = synchro.getActualNo(args[0] + davResourceOptional.get().getPath());
+            if(davResource.isPresent()) {
+                final DavResource magazyn = davResource.get();
+                final File temporary = File.createTempFile("magazyn",".pdf");
+                final InputStream magazynStream = synchro.getConnection().get(args[0]+magazyn.getPath());
+                FileUtils.copyInputStreamToFile(magazynStream,temporary);
+                Desktop.getDesktop().open(temporary);
+            }
         }
 
     }
 
     private Optional<DavResource> getActualNo(String path) throws IOException {
-        connection.list(path,1,true).stream().filter(resource -> "application/pdf".equals(resource.getContentType())).forEach(resource -> System.out.println(resource.getModified()));
-        return Optional.empty();
+        return connection.list(path,1,true).stream().filter(resource -> "application/pdf".equals(resource.getContentType()))
+                .sorted((resourceA, resourceB) -> {
+                    if(resourceA == null || resourceB == null) {
+                        return 0;
+                    }
+                    if(resourceA.getModified() == null || resourceB.getModified() == null) {
+                        return 0;
+                    }
+                    return resourceA.getModified().after(resourceB.getModified()) ? -1 : 1;
+                }).findFirst();
     }
 
     private Sardine getConnection() {
